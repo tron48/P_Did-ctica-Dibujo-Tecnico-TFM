@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI, Type } from '@google/genai';
-import { optionalAuth, AuthRequest } from './src/middleware/auth.ts';
+import { optionalAuth, type AuthRequest } from './src/middleware/auth.ts';
 import {
   syncOrSeedAllData,
   saveTeacherProfile,

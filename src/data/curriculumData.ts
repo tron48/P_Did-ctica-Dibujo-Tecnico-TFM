@@ -1,4 +1,4 @@
-import {
+import type {
   SdaData,
   CalendarDay,
   DidacticMilestone,
@@ -8,8 +8,8 @@ import {
   Student,
   StudentGradeRecord,
   SdaTemplate
-} from '../types';
-import { cascadeAllSdas } from '../utils/calendarScheduler';
+} from '../types/index.ts';
+import { cascadeAllSdas } from '../utils/calendarScheduler.ts';
 
 export const DEFAULT_TEACHER_PROFILE: TeacherProfile = {
   name: 'Tomás Rodríguez Campos',

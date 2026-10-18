@@ -14,7 +14,7 @@ import {
   INITIAL_STUDENTS,
   INITIAL_GRADE_RECORDS
 } from '../data/curriculumData.ts';
-import { SdaData, TeacherProfile, Student, StudentGradeRecord } from '../types/index.ts';
+import type { SdaData, TeacherProfile, Student, StudentGradeRecord } from '../types/index.ts';
 
 export async function getOrCreateUser(uid: string, email: string) {
   try {

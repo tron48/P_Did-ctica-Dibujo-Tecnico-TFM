@@ -1,4 +1,4 @@
-import { SdaData, CalendarDay } from '../types';
+import type { SdaData, CalendarDay } from '../types/index.ts';
 
 export const EXTREMADURA_HOLIDAYS_2027_2028: Record<string, string> = {
   // 1.er Trimestre 2027
