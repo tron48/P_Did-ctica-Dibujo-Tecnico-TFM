@@ -21,6 +21,8 @@ export const teacherProfiles = pgTable('teacher_profiles', {
   academicYear: text('academic_year').notNull(),
   hours: text('hours').notNull(),
   avatarUrl: text('avatar_url'),
+  appName: text('app_name'),
+  appLogoUrl: text('app_logo_url'),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 

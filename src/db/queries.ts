@@ -52,7 +52,9 @@ export async function getTeacherProfile(userId: string): Promise<TeacherProfile 
       framework: r.framework,
       academicYear: r.academicYear,
       hours: r.hours,
-      avatarUrl: r.avatarUrl || undefined
+      avatarUrl: r.avatarUrl || undefined,
+      appName: r.appName || 'Norma & Trazo',
+      appLogoUrl: r.appLogoUrl || undefined
     };
   } catch (error) {
     console.error('Error in getTeacherProfile:', error);
@@ -73,6 +75,8 @@ export async function saveTeacherProfile(userId: string, profile: TeacherProfile
     const academicYear = profile.academicYear?.trim() || '2027–2028';
     const hours = profile.hours?.trim() || '4 h/semana · 140 h anuales';
     const avatarUrl = profile.avatarUrl || null;
+    const appName = profile.appName?.trim() || 'Norma & Trazo';
+    const appLogoUrl = profile.appLogoUrl || null;
 
     await db
       .insert(teacherProfiles)
@@ -86,7 +90,9 @@ export async function saveTeacherProfile(userId: string, profile: TeacherProfile
         framework,
         academicYear,
         hours,
-        avatarUrl
+        avatarUrl,
+        appName,
+        appLogoUrl
       })
       .onConflictDoUpdate({
         target: teacherProfiles.userId,
@@ -100,6 +106,8 @@ export async function saveTeacherProfile(userId: string, profile: TeacherProfile
           academicYear,
           hours,
           avatarUrl,
+          appName,
+          appLogoUrl,
           updatedAt: new Date()
         }
       });
@@ -113,7 +121,9 @@ export async function saveTeacherProfile(userId: string, profile: TeacherProfile
       framework,
       academicYear,
       hours,
-      avatarUrl: avatarUrl || undefined
+      avatarUrl: avatarUrl || undefined,
+      appName,
+      appLogoUrl: appLogoUrl || undefined
     };
   } catch (error) {
     console.error('Error in saveTeacherProfile:', error);

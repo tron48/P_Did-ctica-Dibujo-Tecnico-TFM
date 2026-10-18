@@ -11,6 +11,8 @@ import type {
 } from '../types/index.ts';
 import { cascadeAllSdas } from '../utils/calendarScheduler.ts';
 
+export const DEFAULT_APP_LOGO = 'https://lh3.googleusercontent.com/aida/AEtjO1WQITGUVmx0hToMtKK1UCJ01qQVb742l1De_eeNzdoaw0JQ_ULuSu14VoiffrJLQ1wtx8o3zFpTCzqZxNCaZNzYw9NVgt6AVF4PccJjJEDPg9qI_WxnARVtk7rTTLk5-umYEXRfPV5_9O9bv3f8qKPKnMphJoXKbIlNCYUTGFVXopj8XF8cOiQJocHvw8KIVJxK2Rzi47d4aaXX21X7E8qbozvyZogWUr20jeg57CFeUAaiD3fHgWoxnQ';
+
 export const DEFAULT_TEACHER_PROFILE: TeacherProfile = {
   name: 'Tomás Rodríguez Campos',
   role: 'Catedrático de Dibujo Técnico',
@@ -20,7 +22,9 @@ export const DEFAULT_TEACHER_PROFILE: TeacherProfile = {
   framework: 'Decreto 110/2022 LOMLOE Extremadura',
   academicYear: '2027–2028',
   hours: '4 h/semana · 140 h anuales',
-  avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuANya4rUoouoQ8zzVxEEA9OQ0zK6JxYoiHhtHb9ypu58KzWH4RTsYBmt23Co9rx0oXCn0jdT3aabCkCZ2VkXeWGe5H9-9Z1-ZChzlANvcwfChH-kqjY1cHc7DXoIhd5cZIixPyb8kp2JFhC9eJS45rF1dINrsDG-O034GdpdAG7zw6LaxtsZDVh2ZTzM7cmtsTlMo7jtX6O3LFhv25l-rRvsZaaPwUUCGOiyn9vwJLwTv1903gUFTm9'
+  avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuANya4rUoouoQ8zzVxEEA9OQ0zK6JxYoiHhtHb9ypu58KzWH4RTsYBmt23Co9rx0oXCn0jdT3aabCkCZ2VkXeWGe5H9-9Z1-ZChzlANvcwfChH-kqjY1cHc7DXoIhd5cZIixPyb8kp2JFhC9eJS45rF1dINrsDG-O034GdpdAG7zw6LaxtsZDVh2ZTzM7cmtsTlMo7jtX6O3LFhv25l-rRvsZaaPwUUCGOiyn9vwJLwTv1903gUFTm9',
+  appName: 'Norma & Trazo',
+  appLogoUrl: DEFAULT_APP_LOGO
 };
 
 export const RAW_INITIAL_SDAS: SdaData[] = [

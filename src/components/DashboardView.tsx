@@ -91,7 +91,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   title="Editar datos del centro, asignatura y profesor"
                 >
                   <span className="material-symbols-outlined text-[15px]">edit</span>
-                  <span>Editar Centro, Asignatura o Profesor</span>
+                  <span>Editar Perfil, Foto, Logo o Nombre de la App</span>
                 </button>
               )}
             </div>

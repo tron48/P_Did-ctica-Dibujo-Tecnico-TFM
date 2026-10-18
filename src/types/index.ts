@@ -10,6 +10,8 @@ export interface TeacherProfile {
   academicYear: string;
   hours: string;
   avatarUrl?: string;
+  appName?: string;
+  appLogoUrl?: string;
 }
 
 export interface CompetenciaEspecifica {

@@ -146,6 +146,11 @@ export default function App() {
     }).catch((err) => console.warn('Could not persist grades to Cloud SQL:', err));
   };
 
+  // Sync browser document title with customized appName
+  useEffect(() => {
+    document.title = `${teacherProfile.appName || 'Norma & Trazo'} · Programación Didáctica 2027–2028`;
+  }, [teacherProfile.appName]);
+
   // Synchronize state from Cloud SQL on mount
   useEffect(() => {
     let active = true;
