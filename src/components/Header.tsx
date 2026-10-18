@@ -5,9 +5,10 @@ interface HeaderProps {
   currentTab: NavTab;
   onNavigate: (tab: NavTab) => void;
   profile: TeacherProfile;
-  onUpdateProfile: (updated: TeacherProfile) => void | Promise<void>;
+  onUpdateProfile: (updated: TeacherProfile) => Promise<{ ok: boolean; message: string }>;
   onShowToast: (message: string) => void;
   isProfileOpen?: boolean;
+  startInEditMode?: boolean;
   onCloseProfile?: () => void;
   onOpenProfile?: (startInEditMode?: boolean) => void;
   onOpenGeminiAssistant?: () => void;
@@ -20,6 +21,7 @@ export const Header: React.FC<HeaderProps> = ({
   onUpdateProfile,
   onShowToast,
   isProfileOpen,
+  startInEditMode,
   onCloseProfile,
   onOpenProfile,
   onOpenGeminiAssistant
@@ -27,6 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [internalShowProfile, setInternalShowProfile] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
 
   const showProfile = isProfileOpen !== undefined ? isProfileOpen : internalShowProfile;
 
@@ -38,9 +41,19 @@ export const Header: React.FC<HeaderProps> = ({
     setFormData(profile);
   }, [profile]);
 
+  // If opened with explicit edit request, start in edit mode
+  React.useEffect(() => {
+    if (showProfile && startInEditMode) {
+      setIsEditing(true);
+      setFormData(profile);
+      setSaveSuccessMsg(null);
+    }
+  }, [showProfile, startInEditMode, profile]);
+
   const handleOpenModal = () => {
     setFormData(profile);
     setIsEditing(false);
+    setSaveSuccessMsg(null);
     if (onOpenProfile) {
       onOpenProfile(false);
     } else {
@@ -50,6 +63,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const handleCloseModal = () => {
     setIsEditing(false);
+    setSaveSuccessMsg(null);
     if (onCloseProfile) {
       onCloseProfile();
     } else {
@@ -60,17 +74,24 @@ export const Header: React.FC<HeaderProps> = ({
   const handleStartEdit = () => {
     setFormData(profile);
     setIsEditing(true);
+    setSaveSuccessMsg(null);
   };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
+    setSaveSuccessMsg(null);
     try {
-      await onUpdateProfile(formData);
+      const result = await onUpdateProfile(formData);
       setIsEditing(false);
-      onShowToast('Datos del centro, asignatura y profesor actualizados y guardados en Cloud SQL.');
-    } catch {
-      onShowToast('Error al actualizar los datos en el servidor.');
+      const msg = result?.message || 'Se ha guardado correctamente en PostgreSQL';
+      setSaveSuccessMsg(msg);
+      onShowToast(msg);
+      setTimeout(() => setSaveSuccessMsg(null), 8000);
+    } catch (err: any) {
+      console.error('Error saving profile to PostgreSQL:', err);
+      const errorMsg = 'Error al guardar en PostgreSQL: ' + (err?.message || 'Fallo de conexión');
+      onShowToast(errorMsg);
     } finally {
       setIsSaving(false);
     }
@@ -254,6 +275,20 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Modal Body */}
             <div className="p-5 flex-1 overflow-y-auto">
+              {/* Success Notification Banner inside modal */}
+              {saveSuccessMsg && (
+                <div className="mb-4 bg-emerald-50 border-2 border-emerald-500 text-emerald-950 rounded-xl p-4 flex items-center gap-3.5 text-xs font-semibold shadow-xs animate-in fade-in duration-200">
+                  <span className="material-symbols-outlined text-emerald-600 text-[26px] shrink-0">check_circle</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-extrabold text-sm text-emerald-900 leading-tight">{saveSuccessMsg}</p>
+                      <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase rounded bg-emerald-600 text-white tracking-wider">PostgreSQL</span>
+                    </div>
+                    <p className="text-[11px] font-medium text-emerald-700 mt-0.5">Tus datos se han persistido con éxito en la base de datos PostgreSQL de Cloud SQL.</p>
+                  </div>
+                </div>
+              )}
+
               {isEditing ? (
                 /* Edit Form */
                 <form onSubmit={handleSaveProfile} className="flex flex-col gap-3.5 text-xs">
@@ -374,10 +409,10 @@ export const Header: React.FC<HeaderProps> = ({
                     <button
                       type="submit"
                       disabled={isSaving}
-                      className="px-4 py-2 rounded-xl bg-secondary hover:bg-slate-900 text-white font-semibold flex items-center gap-1.5 transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
+                      className="px-5 py-2.5 rounded-xl bg-secondary hover:bg-slate-900 text-white font-semibold flex items-center gap-2 transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
                     >
-                      <span className="material-symbols-outlined text-[16px]">{isSaving ? 'sync' : 'check'}</span>
-                      <span>{isSaving ? 'Guardando en Cloud SQL...' : 'Guardar Cambios'}</span>
+                      <span className="material-symbols-outlined text-[18px]">{isSaving ? 'sync' : 'cloud_done'}</span>
+                      <span>{isSaving ? 'Guardando en PostgreSQL...' : 'Guardar Cambios en PostgreSQL'}</span>
                     </button>
                   </div>
                 </form>

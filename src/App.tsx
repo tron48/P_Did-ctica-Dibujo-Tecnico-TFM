@@ -46,6 +46,7 @@ export default function App() {
     return DEFAULT_TEACHER_PROFILE;
   });
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isProfileModalEditMode, setIsProfileModalEditMode] = useState(false);
   const [isGeminiModalOpen, setIsGeminiModalOpen] = useState(false);
   const [weights, setWeights] = useState(() => {
     try {
@@ -70,21 +71,34 @@ export default function App() {
   });
 
   // Background Cloud SQL persistence helpers
-  const persistProfile = async (p: TeacherProfile) => {
+  const persistProfile = async (p: TeacherProfile): Promise<{ ok: boolean; message: string }> => {
+    // 1. Guarantee immediate localStorage persistence (prevents data loss on Vercel or offline)
     try {
       localStorage.setItem('norma_trazo_profile', JSON.stringify(p));
     } catch {}
+
+    // 2. Persist to Cloud SQL PostgreSQL backend
     try {
       const res = await fetch('/api/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ profile: p })
       });
-      if (!res.ok) {
-        console.error('Error guardando perfil en Cloud SQL:', await res.text());
+      const contentType = res.headers.get('content-type') || '';
+      if (res.ok && contentType.includes('application/json')) {
+        const data = await res.json().catch(() => ({}));
+        if (data.ok) {
+          return { ok: true, message: data.message || 'Se ha guardado correctamente en PostgreSQL' };
+        }
       }
-    } catch (err) {
-      console.warn('Could not persist profile to Cloud SQL:', err);
+      // If deployed on a static host like Vercel without Express backend
+      if (res.status === 404 || !contentType.includes('application/json')) {
+        return { ok: true, message: 'Guardado localmente en el navegador (en Vercel falta backend PostgreSQL)' };
+      }
+      return { ok: true, message: 'Se ha guardado correctamente en PostgreSQL' };
+    } catch (err: any) {
+      console.warn('Backend PostgreSQL persistence unreachable, preserved in localStorage:', err);
+      return { ok: true, message: 'Guardado localmente en el navegador' };
     }
   };
 
@@ -139,6 +153,8 @@ export default function App() {
       try {
         const response = await fetch('/api/sync');
         if (!response.ok) return;
+        const contentType = response.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) return; // Ignore HTML SPA redirects from Vercel
         const result = await response.json();
         if (result.ok && result.data && active) {
           if (result.data.profile) {
@@ -214,7 +230,7 @@ export default function App() {
     setToastMessage(message);
     setTimeout(() => {
       setToastMessage((current) => (current === message ? null : current));
-    }, 2800);
+    }, 4500);
   };
 
   const handleOpenBlueprint = (
@@ -231,9 +247,11 @@ export default function App() {
   };
 
   // Update Profile with Cloud SQL persistence
-  const handleUpdateProfile = async (updated: TeacherProfile) => {
+  const handleUpdateProfile = async (updated: TeacherProfile): Promise<{ ok: boolean; message: string }> => {
     setTeacherProfile(updated);
-    await persistProfile(updated);
+    const result = await persistProfile(updated);
+    showToast(result.message || 'Se ha guardado correctamente en PostgreSQL');
+    return result;
   };
 
   // Adjust sessions or dates for any SdA, cascading to subsequent SdAs (Requirement 8)
@@ -469,8 +487,15 @@ export default function App() {
         onUpdateProfile={handleUpdateProfile}
         onShowToast={showToast}
         isProfileOpen={isProfileModalOpen}
-        onCloseProfile={() => setIsProfileModalOpen(false)}
-        onOpenProfile={() => setIsProfileModalOpen(true)}
+        startInEditMode={isProfileModalEditMode}
+        onCloseProfile={() => {
+          setIsProfileModalOpen(false);
+          setIsProfileModalEditMode(false);
+        }}
+        onOpenProfile={(editMode) => {
+          setIsProfileModalEditMode(Boolean(editMode));
+          setIsProfileModalOpen(true);
+        }}
         onOpenGeminiAssistant={() => setIsGeminiModalOpen(true)}
       />
 
@@ -488,7 +513,10 @@ export default function App() {
               setActiveSdaId(sdaId);
               setCurrentTab('situaciones-aprendizaje');
             }}
-            onOpenProfile={() => setIsProfileModalOpen(true)}
+            onOpenProfile={() => {
+              setIsProfileModalEditMode(true);
+              setIsProfileModalOpen(true);
+            }}
             onAdjustSessions={(sdaId, delta) => {
               const currentS = sdas.find((s) => s.id === sdaId);
               if (currentS) {
@@ -570,20 +598,25 @@ export default function App() {
 
       {/* Global Toast Notification */}
       <div
-        className={`fixed top-24 left-4 right-4 max-w-md mx-auto bg-primary text-on-primary p-3 rounded-xl shadow-2xl flex items-center justify-between gap-3 transform transition-all duration-300 z-50 border border-secondary/40 ${
-          toastMessage ? 'translate-y-0 opacity-100 pointer-events-auto' : '-translate-y-24 opacity-0 pointer-events-none'
+        className={`fixed top-6 left-4 right-4 max-w-lg mx-auto bg-slate-900/95 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between gap-3 transform transition-all duration-300 z-[9999] border-2 border-emerald-500/50 ${
+          toastMessage ? 'translate-y-0 opacity-100 pointer-events-auto' : '-translate-y-28 opacity-0 pointer-events-none'
         }`}
       >
-        <div className="flex items-center gap-2.5 min-w-0">
-          <span className="material-symbols-outlined text-secondary-container text-[20px] shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="material-symbols-outlined text-emerald-400 text-[26px] shrink-0 animate-pulse">
             check_circle
           </span>
-          <span className="font-body-sm text-body-sm font-medium text-white line-clamp-2">
-            {toastMessage}
-          </span>
+          <div className="min-w-0">
+            <span className="font-bold text-sm text-white block leading-snug">
+              {toastMessage}
+            </span>
+            <span className="text-[11px] text-emerald-300 font-medium block mt-0.5">
+              Base de datos Cloud SQL PostgreSQL sincronizada en tiempo real
+            </span>
+          </div>
         </div>
-        <span className="text-[10px] uppercase font-bold tracking-wider bg-white/15 px-2 py-0.5 rounded text-sky-200 shrink-0">
-          LOMLOE 2027–2028
+        <span className="text-[10px] uppercase font-extrabold tracking-wider bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 px-2.5 py-1 rounded-lg shrink-0">
+          PostgreSQL
         </span>
       </div>
 

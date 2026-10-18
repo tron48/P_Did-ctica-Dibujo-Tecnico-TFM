@@ -62,35 +62,59 @@ export async function getTeacherProfile(userId: string): Promise<TeacherProfile 
 
 export async function saveTeacherProfile(userId: string, profile: TeacherProfile) {
   try {
+    await getOrCreateUser(userId, 'docente@educarex.es').catch(() => {});
+
+    const name = profile.name?.trim() || 'Tomás Rodríguez Campos';
+    const role = profile.role?.trim() || 'Catedrático de Dibujo Técnico';
+    const center = profile.center?.trim() || 'IES Santa Eulalia · Mérida';
+    const department = profile.department?.trim() || 'Artes Plásticas y Visuales';
+    const subject = profile.subject?.trim() || 'Dibujo Técnico I (1.º Bach.)';
+    const framework = profile.framework?.trim() || 'Decreto 110/2022 LOMLOE Extremadura';
+    const academicYear = profile.academicYear?.trim() || '2027–2028';
+    const hours = profile.hours?.trim() || '4 h/semana · 140 h anuales';
+    const avatarUrl = profile.avatarUrl || null;
+
     await db
       .insert(teacherProfiles)
       .values({
         userId,
-        name: profile.name,
-        role: profile.role,
-        center: profile.center,
-        department: profile.department,
-        subject: profile.subject,
-        framework: profile.framework,
-        academicYear: profile.academicYear,
-        hours: profile.hours,
-        avatarUrl: profile.avatarUrl || null
+        name,
+        role,
+        center,
+        department,
+        subject,
+        framework,
+        academicYear,
+        hours,
+        avatarUrl
       })
       .onConflictDoUpdate({
         target: teacherProfiles.userId,
         set: {
-          name: profile.name,
-          role: profile.role,
-          center: profile.center,
-          department: profile.department,
-          subject: profile.subject,
-          framework: profile.framework,
-          academicYear: profile.academicYear,
-          hours: profile.hours,
-          avatarUrl: profile.avatarUrl || null,
+          name,
+          role,
+          center,
+          department,
+          subject,
+          framework,
+          academicYear,
+          hours,
+          avatarUrl,
           updatedAt: new Date()
         }
       });
+
+    return {
+      name,
+      role,
+      center,
+      department,
+      subject,
+      framework,
+      academicYear,
+      hours,
+      avatarUrl: avatarUrl || undefined
+    };
   } catch (error) {
     console.error('Error in saveTeacherProfile:', error);
     throw new Error('Database error saving profile', { cause: error });

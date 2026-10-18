@@ -350,11 +350,12 @@ app.put('/api/profile', optionalAuth, async (req: AuthRequest, res) => {
     const userId = req.user?.uid || 'teacher-norma-trazo-default';
     const { profile } = req.body;
     if (!profile) return res.status(400).json({ error: 'Missing profile payload' });
-    await saveTeacherProfile(userId, profile);
-    res.json({ ok: true });
+    const saved = await saveTeacherProfile(userId, profile);
+    console.log(`[PostgreSQL] Saved profile for ${userId}: ${saved.name}`);
+    res.json({ ok: true, message: 'Se ha guardado correctamente en PostgreSQL', profile: saved });
   } catch (error: any) {
-    console.error('Error saving profile:', error);
-    res.status(500).json({ error: error.message || 'Error saving profile' });
+    console.error('Error saving profile to PostgreSQL:', error);
+    res.status(500).json({ error: error.message || 'Error saving profile to PostgreSQL' });
   }
 });
 
@@ -365,7 +366,7 @@ app.put('/api/sdas', optionalAuth, async (req: AuthRequest, res) => {
     const { sdas } = req.body;
     if (!Array.isArray(sdas)) return res.status(400).json({ error: 'sdas must be an array' });
     await saveAllSdas(userId, sdas);
-    res.json({ ok: true });
+    res.json({ ok: true, message: 'Se ha guardado correctamente en PostgreSQL' });
   } catch (error: any) {
     console.error('Error saving sdas:', error);
     res.status(500).json({ error: error.message || 'Error saving sdas' });
@@ -379,7 +380,7 @@ app.put('/api/weights', optionalAuth, async (req: AuthRequest, res) => {
     const { weights } = req.body;
     if (!weights) return res.status(400).json({ error: 'weights payload required' });
     await saveCurriculumWeights(userId, weights);
-    res.json({ ok: true });
+    res.json({ ok: true, message: 'Se ha guardado correctamente en PostgreSQL' });
   } catch (error: any) {
     console.error('Error saving weights:', error);
     res.status(500).json({ error: error.message || 'Error saving weights' });
@@ -393,7 +394,7 @@ app.put('/api/students', optionalAuth, async (req: AuthRequest, res) => {
     const { students } = req.body;
     if (!Array.isArray(students)) return res.status(400).json({ error: 'students must be an array' });
     await saveStudents(userId, students);
-    res.json({ ok: true });
+    res.json({ ok: true, message: 'Se ha guardado correctamente en PostgreSQL' });
   } catch (error: any) {
     console.error('Error saving students:', error);
     res.status(500).json({ error: error.message || 'Error saving students' });
@@ -407,7 +408,7 @@ app.put('/api/grades', optionalAuth, async (req: AuthRequest, res) => {
     const { gradeRecords } = req.body;
     if (!Array.isArray(gradeRecords)) return res.status(400).json({ error: 'gradeRecords must be an array' });
     await saveStudentGradeRecords(userId, gradeRecords);
-    res.json({ ok: true });
+    res.json({ ok: true, message: 'Se ha guardado correctamente en PostgreSQL' });
   } catch (error: any) {
     console.error('Error saving grades:', error);
     res.status(500).json({ error: error.message || 'Error saving grades' });
@@ -424,7 +425,7 @@ app.post('/api/sync/all', optionalAuth, async (req: AuthRequest, res) => {
     if (weights) await saveCurriculumWeights(userId, weights);
     if (students && Array.isArray(students)) await saveStudents(userId, students);
     if (gradeRecords && Array.isArray(gradeRecords)) await saveStudentGradeRecords(userId, gradeRecords);
-    res.json({ ok: true });
+    res.json({ ok: true, message: 'Se ha guardado correctamente en PostgreSQL' });
   } catch (error: any) {
     console.error('Error saving all data:', error);
     res.status(500).json({ error: error.message || 'Error saving all data' });
