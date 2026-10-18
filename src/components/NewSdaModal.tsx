@@ -17,6 +17,7 @@ interface NewSdaModalProps {
   sdas: SdaData[];
   onCreated: (newSda: Partial<SdaData>) => void;
   onShowToast: (message: string) => void;
+  onOpenGeminiAssistant?: () => void;
 }
 
 export const NewSdaModal: React.FC<NewSdaModalProps> = ({
@@ -24,7 +25,8 @@ export const NewSdaModal: React.FC<NewSdaModalProps> = ({
   onClose,
   sdas,
   onCreated,
-  onShowToast
+  onShowToast,
+  onOpenGeminiAssistant
 }) => {
   const [creationTab, setCreationTab] = useState<'config' | 'templates'>('config');
   const [title, setTitle] = useState('');
@@ -215,6 +217,20 @@ export const NewSdaModal: React.FC<NewSdaModalProps> = ({
                 {SDA_TEMPLATES.length}
               </span>
             </button>
+            {onOpenGeminiAssistant && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenGeminiAssistant();
+                }}
+                className="px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer bg-gradient-to-r from-sky-500 via-indigo-500 to-primary text-white shadow-xs hover:brightness-110"
+                title="Generar SdA completa con Inteligencia Artificial Gemini"
+              >
+                <span className="material-symbols-outlined text-[16px] animate-pulse">auto_awesome</span>
+                <span>Diseñar con Gemini IA</span>
+              </button>
+            )}
           </div>
           <span className="text-[11px] text-slate-500 hidden sm:inline">
             Decreto 110/2022 · Junta de Extremadura

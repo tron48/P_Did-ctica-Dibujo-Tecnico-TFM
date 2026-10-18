@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavTab, SdaData, TeacherProfile, Student, StudentGradeRecord } from './types';
 import { INITIAL_SDAS, DEFAULT_TEACHER_PROFILE, INITIAL_STUDENTS, INITIAL_GRADE_RECORDS } from './data/curriculumData';
 import { cascadeAllSdas } from './utils/calendarScheduler';
@@ -20,16 +20,172 @@ import { Simulation3DModal } from './components/Simulation3DModal';
 import { ExportPdfModal } from './components/ExportPdfModal';
 import { NewSdaModal } from './components/NewSdaModal';
 import { WeightEditorModal } from './components/WeightEditorModal';
+import { GeminiAssistantModal } from './components/GeminiAssistantModal';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<NavTab>('dashboard');
-  const [sdas, setSdas] = useState<SdaData[]>(INITIAL_SDAS);
-  const [activeSdaId, setActiveSdaId] = useState<string>(INITIAL_SDAS[0]?.id || 'sda-1');
-  const [teacherProfile, setTeacherProfile] = useState<TeacherProfile>(DEFAULT_TEACHER_PROFILE);
+  const [sdas, setSdas] = useState<SdaData[]>(() => {
+    try {
+      const saved = localStorage.getItem('norma_trazo_sdas');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return INITIAL_SDAS;
+  });
+  const [activeSdaId, setActiveSdaId] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('norma_trazo_active_sda');
+      if (saved) return saved;
+    } catch {}
+    return INITIAL_SDAS[0]?.id || 'sda-1';
+  });
+  const [teacherProfile, setTeacherProfile] = useState<TeacherProfile>(() => {
+    try {
+      const saved = localStorage.getItem('norma_trazo_profile');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return DEFAULT_TEACHER_PROFILE;
+  });
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [weights, setWeights] = useState({ ce1: 25, ce2: 35, ce3: 30, ce4: 10 });
-  const [students, setStudents] = useState<Student[]>(INITIAL_STUDENTS);
-  const [gradeRecords, setGradeRecords] = useState<StudentGradeRecord[]>(INITIAL_GRADE_RECORDS);
+  const [isGeminiModalOpen, setIsGeminiModalOpen] = useState(false);
+  const [weights, setWeights] = useState(() => {
+    try {
+      const saved = localStorage.getItem('norma_trazo_weights');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return { ce1: 25, ce2: 35, ce3: 30, ce4: 10 };
+  });
+  const [students, setStudents] = useState<Student[]>(() => {
+    try {
+      const saved = localStorage.getItem('norma_trazo_students');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return INITIAL_STUDENTS;
+  });
+  const [gradeRecords, setGradeRecords] = useState<StudentGradeRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem('norma_trazo_grades');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return INITIAL_GRADE_RECORDS;
+  });
+
+  // Background Cloud SQL persistence helpers
+  const persistProfile = async (p: TeacherProfile) => {
+    try {
+      localStorage.setItem('norma_trazo_profile', JSON.stringify(p));
+    } catch {}
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile: p })
+      });
+      if (!res.ok) {
+        console.error('Error guardando perfil en Cloud SQL:', await res.text());
+      }
+    } catch (err) {
+      console.warn('Could not persist profile to Cloud SQL:', err);
+    }
+  };
+
+  const persistSdas = (list: SdaData[]) => {
+    try {
+      localStorage.setItem('norma_trazo_sdas', JSON.stringify(list));
+    } catch {}
+    fetch('/api/sdas', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sdas: list })
+    }).catch((err) => console.warn('Could not persist sdas to Cloud SQL:', err));
+  };
+
+  const persistWeights = (w: { ce1: number; ce2: number; ce3: number; ce4: number }) => {
+    try {
+      localStorage.setItem('norma_trazo_weights', JSON.stringify(w));
+    } catch {}
+    fetch('/api/weights', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ weights: w })
+    }).catch((err) => console.warn('Could not persist weights to Cloud SQL:', err));
+  };
+
+  const persistStudents = (stus: Student[]) => {
+    try {
+      localStorage.setItem('norma_trazo_students', JSON.stringify(stus));
+    } catch {}
+    fetch('/api/students', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ students: stus })
+    }).catch((err) => console.warn('Could not persist students to Cloud SQL:', err));
+  };
+
+  const persistGrades = (grades: StudentGradeRecord[]) => {
+    try {
+      localStorage.setItem('norma_trazo_grades', JSON.stringify(grades));
+    } catch {}
+    fetch('/api/grades', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gradeRecords: grades })
+    }).catch((err) => console.warn('Could not persist grades to Cloud SQL:', err));
+  };
+
+  // Synchronize state from Cloud SQL on mount
+  useEffect(() => {
+    let active = true;
+    const fetchCloudSqlData = async () => {
+      try {
+        const response = await fetch('/api/sync');
+        if (!response.ok) return;
+        const result = await response.json();
+        if (result.ok && result.data && active) {
+          if (result.data.profile) {
+            setTeacherProfile(result.data.profile);
+            try {
+              localStorage.setItem('norma_trazo_profile', JSON.stringify(result.data.profile));
+            } catch {}
+          }
+          if (result.data.sdas && Array.isArray(result.data.sdas) && result.data.sdas.length > 0) {
+            const cascaded = cascadeAllSdas(result.data.sdas);
+            setSdas(cascaded);
+            try {
+              localStorage.setItem('norma_trazo_sdas', JSON.stringify(cascaded));
+            } catch {}
+            if (!activeSdaId || !cascaded.some((s: SdaData) => s.id === activeSdaId)) {
+              setActiveSdaId(cascaded[0].id);
+            }
+          }
+          if (result.data.weights) {
+            setWeights(result.data.weights);
+            try {
+              localStorage.setItem('norma_trazo_weights', JSON.stringify(result.data.weights));
+            } catch {}
+          }
+          if (result.data.students && Array.isArray(result.data.students) && result.data.students.length > 0) {
+            setStudents(result.data.students);
+            try {
+              localStorage.setItem('norma_trazo_students', JSON.stringify(result.data.students));
+            } catch {}
+          }
+          if (result.data.gradeRecords && Array.isArray(result.data.gradeRecords) && result.data.gradeRecords.length > 0) {
+            setGradeRecords(result.data.gradeRecords);
+            try {
+              localStorage.setItem('norma_trazo_grades', JSON.stringify(result.data.gradeRecords));
+            } catch {}
+          }
+        }
+      } catch (err) {
+        console.warn('Initial Cloud SQL load fallback:', err);
+      }
+    };
+
+    fetchCloudSqlData();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Toast notification state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -74,6 +230,12 @@ export default function App() {
     });
   };
 
+  // Update Profile with Cloud SQL persistence
+  const handleUpdateProfile = async (updated: TeacherProfile) => {
+    setTeacherProfile(updated);
+    await persistProfile(updated);
+  };
+
   // Adjust sessions or dates for any SdA, cascading to subsequent SdAs (Requirement 8)
   const handleUpdateSessionSchedule = (
     sdaId: string,
@@ -95,6 +257,7 @@ export default function App() {
       });
 
       const cascaded = cascadeAllSdas(updatedList);
+      persistSdas(cascaded);
       return cascaded;
     });
 
@@ -105,12 +268,16 @@ export default function App() {
   const handleUpdateSda = (updated: SdaData) => {
     setSdas((prevSdas) => {
       const updatedList = prevSdas.map((s) => (s.id === updated.id ? updated : s));
-      return cascadeAllSdas(updatedList);
+      const cascaded = cascadeAllSdas(updatedList);
+      persistSdas(cascaded);
+      return cascaded;
     });
   };
 
   const handleUpdateAllSdas = (updatedSdas: SdaData[]) => {
-    setSdas(cascadeAllSdas(updatedSdas));
+    const cascaded = cascadeAllSdas(updatedSdas);
+    setSdas(cascaded);
+    persistSdas(cascaded);
   };
 
   // Creating a new SdA with automatic session placement in calendar
@@ -200,6 +367,7 @@ export default function App() {
       const updated = [...prevSdas, created];
       const cascaded = cascadeAllSdas(updated);
       setActiveSdaId(created.id);
+      persistSdas(cascaded);
       return cascaded;
     });
 
@@ -229,21 +397,45 @@ export default function App() {
       const updated = [...prevSdas, duplicated];
       const cascaded = cascadeAllSdas(updated);
       setActiveSdaId(duplicated.id);
+      persistSdas(cascaded);
       return cascaded;
     });
 
     showToast(`SdA duplicada y encadenada automáticamente en el calendario.`);
   };
 
-  // Feature 1: Student Gradebook handlers
+  // Feature 1: Student Gradebook handlers with Cloud SQL persistence
   const handleAddStudent = (newStudent: Student) => {
-    setStudents((prev) => [...prev, newStudent]);
+    setStudents((prev) => {
+      const updated = [...prev, newStudent];
+      persistStudents(updated);
+      return updated;
+    });
   };
 
   const handleRemoveStudent = (studentId: string) => {
-    setStudents((prev) => prev.filter((s) => s.id !== studentId));
-    setGradeRecords((prev) => prev.filter((r) => r.studentId !== studentId));
+    setStudents((prev) => {
+      const updated = prev.filter((s) => s.id !== studentId);
+      persistStudents(updated);
+      return updated;
+    });
+    setGradeRecords((prev) => {
+      const updated = prev.filter((r) => r.studentId !== studentId);
+      persistGrades(updated);
+      return updated;
+    });
     showToast('Alumno eliminado del cuaderno.');
+  };
+
+  const handleUpdateGradeRecords = (newRecords: StudentGradeRecord[]) => {
+    setGradeRecords(newRecords);
+    persistGrades(newRecords);
+  };
+
+  const handleSaveWeights = (newW: { ce1: number; ce2: number; ce3: number; ce4: number }) => {
+    setWeights(newW);
+    persistWeights(newW);
+    showToast('Ponderaciones guardadas: suma total 100% verificada.');
   };
 
   // Feature 3: Restore full JSON Backup
@@ -259,6 +451,12 @@ export default function App() {
     if (data.weights) setWeights(data.weights);
     if (data.students) setStudents(data.students);
     if (data.gradeRecords) setGradeRecords(data.gradeRecords);
+
+    fetch('/api/sync/all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).catch((err) => console.warn('Could not persist restored backup:', err));
   };
 
   return (
@@ -268,11 +466,12 @@ export default function App() {
         currentTab={currentTab}
         onNavigate={setCurrentTab}
         profile={teacherProfile}
-        onUpdateProfile={setTeacherProfile}
+        onUpdateProfile={handleUpdateProfile}
         onShowToast={showToast}
         isProfileOpen={isProfileModalOpen}
         onCloseProfile={() => setIsProfileModalOpen(false)}
         onOpenProfile={() => setIsProfileModalOpen(true)}
+        onOpenGeminiAssistant={() => setIsGeminiModalOpen(true)}
       />
 
       {/* Main Container */}
@@ -297,6 +496,7 @@ export default function App() {
               }
             }}
             onDuplicateSda={handleDuplicateSda}
+            onOpenGeminiAssistant={() => setIsGeminiModalOpen(true)}
           />
         )}
 
@@ -349,7 +549,7 @@ export default function App() {
             sdas={sdas}
             students={students}
             gradeRecords={gradeRecords}
-            onUpdateGradeRecords={setGradeRecords}
+            onUpdateGradeRecords={handleUpdateGradeRecords}
             onAddStudent={handleAddStudent}
             onRemoveStudent={handleRemoveStudent}
           />
@@ -422,6 +622,7 @@ export default function App() {
         sdas={sdas}
         onCreated={handleCreateNewSda}
         onShowToast={showToast}
+        onOpenGeminiAssistant={() => setIsGeminiModalOpen(true)}
       />
 
       {/* Competency Weight Editor Modal */}
@@ -429,10 +630,17 @@ export default function App() {
         isOpen={isWeightEditorOpen}
         onClose={() => setIsWeightEditorOpen(false)}
         weights={weights}
-        onSave={(newW) => {
-          setWeights(newW);
-          showToast('Ponderaciones guardadas: suma total 100% verificada.');
-        }}
+        onSave={handleSaveWeights}
+      />
+
+      {/* Gemini AI Curriculum Assistant Modal */}
+      <GeminiAssistantModal
+        isOpen={isGeminiModalOpen}
+        onClose={() => setIsGeminiModalOpen(false)}
+        sdas={sdas}
+        profile={teacherProfile}
+        onInsertGeneratedSda={handleCreateNewSda}
+        onShowToast={showToast}
       />
     </div>
   );

@@ -5,11 +5,12 @@ interface HeaderProps {
   currentTab: NavTab;
   onNavigate: (tab: NavTab) => void;
   profile: TeacherProfile;
-  onUpdateProfile: (updated: TeacherProfile) => void;
+  onUpdateProfile: (updated: TeacherProfile) => void | Promise<void>;
   onShowToast: (message: string) => void;
   isProfileOpen?: boolean;
   onCloseProfile?: () => void;
   onOpenProfile?: (startInEditMode?: boolean) => void;
+  onOpenGeminiAssistant?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -20,10 +21,12 @@ export const Header: React.FC<HeaderProps> = ({
   onShowToast,
   isProfileOpen,
   onCloseProfile,
-  onOpenProfile
+  onOpenProfile,
+  onOpenGeminiAssistant
 }) => {
   const [internalShowProfile, setInternalShowProfile] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const showProfile = isProfileOpen !== undefined ? isProfileOpen : internalShowProfile;
 
@@ -59,11 +62,18 @@ export const Header: React.FC<HeaderProps> = ({
     setIsEditing(true);
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    onUpdateProfile(formData);
-    setIsEditing(false);
-    onShowToast('Datos del centro, asignatura y profesor actualizados en toda la programación.');
+    setIsSaving(true);
+    try {
+      await onUpdateProfile(formData);
+      setIsEditing(false);
+      onShowToast('Datos del centro, asignatura y profesor actualizados y guardados en Cloud SQL.');
+    } catch {
+      onShowToast('Error al actualizar los datos en el servidor.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -166,6 +176,18 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Teacher Profile & Fast Actions */}
           <div className="flex items-center gap-2 shrink-0">
+            {onOpenGeminiAssistant && (
+              <button
+                type="button"
+                onClick={onOpenGeminiAssistant}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-sky-400 via-indigo-400 to-primary text-slate-950 font-bold text-xs shadow-md hover:brightness-110 active:scale-95 transition-all cursor-pointer border border-white/30"
+                title="Abrir Asistente Curricular con IA Gemini (@google/genai)"
+              >
+                <span className="material-symbols-outlined text-[17px] text-slate-950 animate-pulse">auto_awesome</span>
+                <span className="font-extrabold tracking-wide">Gemini IA</span>
+              </button>
+            )}
+
             <button 
               onClick={handleOpenModal}
               className="flex items-center gap-2 p-1 rounded-full hover:bg-surface-container-lowest/10 transition-colors focus:outline-none"
@@ -351,10 +373,11 @@ export const Header: React.FC<HeaderProps> = ({
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 rounded-xl bg-secondary hover:bg-slate-900 text-white font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
+                      disabled={isSaving}
+                      className="px-4 py-2 rounded-xl bg-secondary hover:bg-slate-900 text-white font-semibold flex items-center gap-1.5 transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
                     >
-                      <span className="material-symbols-outlined text-[16px]">check</span>
-                      <span>Guardar Cambios</span>
+                      <span className="material-symbols-outlined text-[16px]">{isSaving ? 'sync' : 'check'}</span>
+                      <span>{isSaving ? 'Guardando en Cloud SQL...' : 'Guardar Cambios'}</span>
                     </button>
                   </div>
                 </form>

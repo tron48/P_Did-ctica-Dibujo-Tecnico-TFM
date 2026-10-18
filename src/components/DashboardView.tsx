@@ -13,6 +13,7 @@ interface DashboardViewProps {
   onOpenProfile?: () => void;
   onAdjustSessions?: (sdaId: string, delta: number) => void;
   onDuplicateSda?: (sdaId: string) => void;
+  onOpenGeminiAssistant?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -25,7 +26,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onSelectSda,
   onOpenProfile,
   onAdjustSessions,
-  onDuplicateSda
+  onDuplicateSda,
+  onOpenGeminiAssistant
 }) => {
   const [showDuaDetails, setShowDuaDetails] = useState(false);
 
@@ -336,17 +338,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               Secuencia de Situaciones de Aprendizaje (Curso 2027–2028)
             </h2>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => onNavigate('calendario-temporizacion')}
-              className="text-xs font-semibold text-secondary hover:text-slate-900 flex items-center gap-1"
+              className="text-xs font-semibold text-secondary hover:text-slate-900 flex items-center gap-1 cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">calendar_month</span>
               <span>Ver en Agenda</span>
             </button>
+            {onOpenGeminiAssistant && (
+              <button
+                type="button"
+                onClick={onOpenGeminiAssistant}
+                className="text-xs font-bold text-white bg-gradient-to-r from-sky-500 via-indigo-500 to-primary px-3 py-1 rounded-lg flex items-center gap-1.5 shadow-xs hover:brightness-110 cursor-pointer"
+                title="Generar y auditar con IA Gemini"
+              >
+                <span className="material-symbols-outlined text-[15px] animate-pulse">auto_awesome</span>
+                <span>Asistente Gemini IA</span>
+              </button>
+            )}
             <button
               onClick={onOpenNewSda}
-              className="text-xs font-semibold text-secondary bg-sky-50 hover:bg-sky-100 border border-sky-200 px-2.5 py-1 rounded-lg flex items-center gap-1"
+              className="text-xs font-semibold text-secondary bg-sky-50 hover:bg-sky-100 border border-sky-200 px-2.5 py-1 rounded-lg flex items-center gap-1 cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">add</span>
               <span>Nueva SdA</span>
