@@ -14,6 +14,7 @@ interface DashboardViewProps {
   onAdjustSessions?: (sdaId: string, delta: number) => void;
   onDuplicateSda?: (sdaId: string) => void;
   onOpenGeminiAssistant?: () => void;
+  onOpenManual?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -27,7 +28,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenProfile,
   onAdjustSessions,
   onDuplicateSda,
-  onOpenGeminiAssistant
+  onOpenGeminiAssistant,
+  onOpenManual
 }) => {
   const [showDuaDetails, setShowDuaDetails] = useState(false);
 
@@ -169,6 +171,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span className="material-symbols-outlined text-secondary text-[18px]">picture_as_pdf</span>
             <span>Generar Documento de Programación 2027–2028 (PDF)</span>
           </button>
+
+          {onOpenManual && (
+            <button
+              onClick={onOpenManual}
+              className="flex items-center gap-2 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-xs font-bold px-4 py-2.5 rounded-xl shrink-0 shadow-xs border border-emerald-200 transition-all"
+              id="btn-manual-sda"
+              title="Ver guía y manual paso a paso para crear Situaciones de Aprendizaje LOMLOE"
+            >
+              <span className="material-symbols-outlined text-emerald-700 text-[18px]">menu_book</span>
+              <span>Manual Paso a Paso: Crear e Integrar SdAs</span>
+            </button>
+          )}
 
           <button
             onClick={() => onNavigate('calendario-temporizacion')}

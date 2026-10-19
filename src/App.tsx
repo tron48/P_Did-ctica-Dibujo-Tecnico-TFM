@@ -21,6 +21,7 @@ import { ExportPdfModal } from './components/ExportPdfModal';
 import { NewSdaModal } from './components/NewSdaModal';
 import { WeightEditorModal } from './components/WeightEditorModal';
 import { GeminiAssistantModal } from './components/GeminiAssistantModal';
+import { ManualSdaModal } from './components/ManualSdaModal';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<NavTab>('dashboard');
@@ -227,6 +228,7 @@ export default function App() {
   const [isExportPdfOpen, setIsExportPdfOpen] = useState(false);
   const [isNewSdaOpen, setIsNewSdaOpen] = useState(false);
   const [isWeightEditorOpen, setIsWeightEditorOpen] = useState(false);
+  const [isManualOpen, setIsManualOpen] = useState(false);
 
   // Active SdA currently loaded in editor
   const activeSda = sdas.find((s) => s.id === activeSdaId) || sdas[0];
@@ -530,6 +532,7 @@ export default function App() {
             }}
             onDuplicateSda={handleDuplicateSda}
             onOpenGeminiAssistant={() => setIsGeminiModalOpen(true)}
+            onOpenManual={() => setIsManualOpen(true)}
           />
         )}
 
@@ -679,6 +682,14 @@ export default function App() {
         profile={teacherProfile}
         onInsertGeneratedSda={handleCreateNewSda}
         onShowToast={showToast}
+      />
+
+      {/* Manual de Creación de SdAs Paso a Paso */}
+      <ManualSdaModal
+        isOpen={isManualOpen}
+        onClose={() => setIsManualOpen(false)}
+        onNavigateToTab={setCurrentTab}
+        onOpenNewSda={() => setIsNewSdaOpen(true)}
       />
     </div>
   );
